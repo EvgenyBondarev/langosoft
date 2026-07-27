@@ -1,0 +1,20 @@
+# .NET
+backend/bin/
+backend/obj/
+backend/Data/
+*.user
+*.suo
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# IDE
+.vscode/
+.idea/
+*.DS_Store
+
+# Secrets
+appsettings.Development.json

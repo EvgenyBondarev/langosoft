@@ -1,0 +1,6 @@
+@LangoSoft.API_HostAddress = http://localhost:5017
+
+GET {{LangoSoft.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
