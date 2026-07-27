@@ -76,9 +76,12 @@ public class GroqService
         return ChatAsync(prompt, 400);
     }
 
-    public async Task<QuizItem> QuizAsync(string language, string mode, string fromLanguage = "English")
+    public async Task<QuizItem> QuizAsync(string language, string mode, string fromLanguage = "English", string previousPrompt = "")
     {
         string prompt;
+        var avoid = string.IsNullOrWhiteSpace(previousPrompt)
+            ? ""
+            : $"\nDo NOT use this exact phrase again: \"{previousPrompt}\"";
 
         if (mode == "pronoun-verb")
         {
@@ -87,7 +90,8 @@ public class GroqService
                 $"Give ONLY a short pronoun + conjugated verb phrase in {fromLanguage}. " +
                 $"Max 3 words. No objects, no adverbs, no extra words.\n" +
                 $"Good examples: 'he knows', 'I am going', 'she sleeps', 'they have eaten', 'we must leave'.\n" +
-                $"Bad examples (too long): 'I'm going to the movies tonight', 'he knows the answer'.\n\n" +
+                $"Bad examples (too long): 'I'm going to the movies tonight', 'he knows the answer'.\n" +
+                avoid + "\n" +
                 $"Return a JSON object with exactly these keys:\n" +
                 $"- \"prompt\": the {fromLanguage} pronoun+verb phrase (max 3 words)\n" +
                 $"- \"answer\": the {language} translation\n" +
@@ -101,7 +105,8 @@ public class GroqService
                 $"Give ONLY a short noun phrase in {fromLanguage}: article/determiner + optional adjective + noun. " +
                 $"Max 4 words. No verbs, no clauses.\n" +
                 $"Good examples: 'the big house', 'a beautiful girl', 'this old book', 'my red car'.\n" +
-                $"Bad examples (have verbs): 'the house is big', 'a girl who is beautiful'.\n\n" +
+                $"Bad examples (have verbs): 'the house is big', 'a girl who is beautiful'.\n" +
+                avoid + "\n" +
                 $"Return a JSON object with exactly these keys:\n" +
                 $"- \"prompt\": the {fromLanguage} noun phrase (max 4 words)\n" +
                 $"- \"answer\": the {language} translation\n" +
@@ -119,7 +124,8 @@ public class GroqService
 
             prompt =
                 $"Generate one language drill exercise for a student learning {language}.\n" +
-                $"Type: {modeDesc}\n\n" +
+                $"Type: {modeDesc}\n" +
+                avoid + "\n" +
                 $"Return a JSON object with exactly these keys:\n" +
                 $"- \"prompt\": what to show the student (be specific: include the base form and what is asked)\n" +
                 $"- \"answer\": the single correct answer string\n" +
@@ -161,9 +167,10 @@ public class GroqService
 
         var body = new Dictionary<string, object>
         {
-            ["model"]     = model,
-            ["max_tokens"] = maxTokens,
-            ["messages"]  = new[] { new { role = "user", content = userMessage } },
+            ["model"]       = model,
+            ["max_tokens"]  = maxTokens,
+            ["temperature"] = 0.9,
+            ["messages"]    = new[] { new { role = "user", content = userMessage } },
         };
         if (jsonMode)
             body["response_format"] = new { type = "json_object" };

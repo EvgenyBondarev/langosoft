@@ -47,6 +47,6 @@ public class AIController(GroqService groqService) : ControllerBase
     public async Task<IActionResult> Quiz([FromBody] QuizRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Language)) return BadRequest("Language required");
-        return Ok(await groqService.QuizAsync(req.Language, req.Mode, req.FromLanguage));
+        return Ok(await groqService.QuizAsync(req.Language, req.Mode, req.FromLanguage, req.PreviousPrompt));
     }
 }

@@ -35,6 +35,7 @@ export interface Structure {
   canticleCount: number;
   cantosPerCanticle: number[];
   canticleNames: string[];
+  loading?: boolean;
 }
 
 export interface QuizItem {

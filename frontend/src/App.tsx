@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AppMode, CantoData, Feature, ConjMode, BookInfo, Structure } from './types';
 import type { TextPanelHandle } from './components/TextPanel';
 import {
-  fetchCanto, fetchStructure, fetchBooks,
+  fetchCanto, fetchStructure, fetchStatus, fetchBooks,
   translateText, askQuestion, grammarBreakdown,
 } from './services/api';
 import { useSpeech } from './hooks/useSpeech';
@@ -53,6 +53,7 @@ export default function App() {
   const [books, setBooks]           = useState<BookInfo[]>([DANTE_FALLBACK]);
   const [selectedBook, setSelectedBook] = useState('dante');
   const [syncScroll, setSyncScroll] = useState(false);
+  const [bookLoading, setBookLoading] = useState(false);
 
   const [mode, setMode]             = useState<AppMode>('normal');
   const [question, setQuestion]     = useState('');
@@ -79,7 +80,7 @@ export default function App() {
     fetchBooks().then(setBooks).catch(() => {});
   }, []);
 
-  // ── On book change: reset nav + fetch structure ────────────────────────────
+  // ── On book change: reset nav + fetch structure (with polling for slow loads) ─
   useEffect(() => {
     nav.setNav(s => ({
       ...s, canticle: 0, canto: 0, line: 0, word: 0, letter: 0,
@@ -88,7 +89,45 @@ export default function App() {
     setStructure(EMPTY_STRUCTURE);
     setCanto(null);
     setBackendReady(false);
-    fetchStructure(selectedBook).then(setStructure).catch(() => {});
+    setBookLoading(false);
+
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const applyStructure = (s: Awaited<ReturnType<typeof fetchStructure>>) => {
+      if (cancelled) return;
+      if (s.loading) {
+        setBookLoading(true);
+        pollTimer = setTimeout(pollStatus, 4000);
+      } else {
+        setBookLoading(false);
+        setStructure(s);
+      }
+    };
+
+    const pollStatus = () => {
+      fetchStatus(selectedBook)
+        .then(({ ready }) => {
+          if (cancelled) return;
+          if (ready) fetchStructure(selectedBook).then(applyStructure).catch(() => {
+            if (!cancelled) pollTimer = setTimeout(pollStatus, 4000);
+          });
+          else pollTimer = setTimeout(pollStatus, 4000);
+        })
+        .catch(() => { if (!cancelled) pollTimer = setTimeout(pollStatus, 4000); });
+    };
+
+    fetchStructure(selectedBook).then(applyStructure).catch(() => {
+      if (!cancelled) {
+        setBookLoading(true);
+        pollTimer = setTimeout(pollStatus, 4000);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      if (pollTimer !== null) clearTimeout(pollTimer);
+    };
   // nav.setNav is stable (from useNavigation), selectedBook is the only real dep
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBook]);
@@ -422,7 +461,23 @@ export default function App() {
             </main>
           )}
 
-          {feature === 'reader' && !hasText && !loading && (
+          {feature === 'reader' && !hasText && bookLoading && (
+            <div className="coming-soon">
+              <div className="coming-soon-icon">⏳</div>
+              <div className="coming-soon-title">Downloading {selectedBookInfo.title}…</div>
+              <p className="coming-soon-msg">Fetching text from Project Gutenberg (first load only).</p>
+            </div>
+          )}
+
+          {feature === 'reader' && !hasText && !bookLoading && loading && (
+            <div className="coming-soon">
+              <div className="coming-soon-icon">⏳</div>
+              <div className="coming-soon-title">Loading {selectedBookInfo.title}…</div>
+              <p className="coming-soon-msg">Please wait.</p>
+            </div>
+          )}
+
+          {feature === 'reader' && !hasText && !bookLoading && !loading && (
             <div className="coming-soon">
               <div className="coming-soon-icon">📚</div>
               <div className="coming-soon-title">{selectedBookInfo.title}</div>
@@ -430,14 +485,6 @@ export default function App() {
               <p className="coming-soon-msg">
                 Text not available yet — the book may be loading or the source URL may need updating.
               </p>
-            </div>
-          )}
-
-          {feature === 'reader' && !hasText && loading && (
-            <div className="coming-soon">
-              <div className="coming-soon-icon">⏳</div>
-              <div className="coming-soon-title">Loading {selectedBookInfo.title}…</div>
-              <p className="coming-soon-msg">Fetching text from Project Gutenberg, please wait.</p>
             </div>
           )}
 

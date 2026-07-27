@@ -13,6 +13,7 @@ export interface StructureResponse {
   canticleCount: number;
   cantosPerCanticle: number[];
   canticleNames: string[];
+  loading?: boolean;
 }
 
 export async function fetchCanto(book: string, canticle: number, canto: number): Promise<CantoResponse> {
@@ -38,11 +39,11 @@ export async function fetchBooks(): Promise<BookInfo[]> {
   return r.json();
 }
 
-export async function fetchQuiz(language: string, mode: string, fromLanguage = 'English'): Promise<QuizItem> {
+export async function fetchQuiz(language: string, mode: string, fromLanguage = 'English', previousPrompt = ''): Promise<QuizItem> {
   const r = await fetch(`${BASE}/ai/quiz`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ language, mode, fromLanguage }),
+    body: JSON.stringify({ language, mode, fromLanguage, previousPrompt }),
   });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();

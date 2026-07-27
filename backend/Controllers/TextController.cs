@@ -15,22 +15,39 @@ public class TextController(TextService textService) : ControllerBase
         Ok(new { ready = textService.IsBookLoaded(book) });
 
     [HttpGet("structure")]
-    public async Task<IActionResult> GetStructure([FromQuery] string book = "dante")
+    public IActionResult GetStructure([FromQuery] string book = "dante")
     {
-        await textService.EnsureBookLoadedAsync(book);
+        if (!textService.IsBookLoaded(book))
+        {
+            _ = textService.EnsureBookLoadedAsync(book);
+            return Ok(new
+            {
+                loading = true,
+                canticleCount = 0,
+                cantosPerCanticle = Array.Empty<int>(),
+                canticleNames = Array.Empty<string>(),
+            });
+        }
         int count  = textService.GetCanticleCount(book);
         var cantos = Enumerable.Range(0, count).Select(c => textService.GetCantoCount(book, c)).ToArray();
         var names  = Enumerable.Range(0, count).Select(c => textService.GetCanticleName(book, c)).ToArray();
-        return Ok(new { canticleCount = count, cantosPerCanticle = cantos, canticleNames = names });
+        return Ok(new { loading = false, canticleCount = count, cantosPerCanticle = cantos, canticleNames = names });
     }
 
     [HttpGet("canto")]
-    public async Task<IActionResult> GetCanto(
+    public IActionResult GetCanto(
         [FromQuery] string book = "dante",
         [FromQuery] int canticle = 0,
         [FromQuery] int canto = 0)
     {
-        await textService.EnsureBookLoadedAsync(book);
+        if (!textService.IsBookLoaded(book))
+            return Ok(new
+            {
+                canticleName = "Loading…",
+                cantoName    = "…",
+                italian      = Array.Empty<string>(),
+                english      = Array.Empty<string>(),
+            });
         return Ok(textService.GetCanto(book, canticle, canto));
     }
 }

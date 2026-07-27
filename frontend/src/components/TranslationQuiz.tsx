@@ -10,6 +10,14 @@ const LANGUAGES = [
   'Polish', 'Portuguese', 'Romanian', 'Russian', 'Spanish', 'Swedish', 'Ukrainian',
 ];
 
+const LANG_LOCALE: Record<string, string> = {
+  Bulgarian: 'bg-BG', Czech: 'cs-CZ', Danish: 'da-DK', Dutch: 'nl-NL',
+  English: 'en-US', Finnish: 'fi-FI', French: 'fr-FR', German: 'de-DE',
+  Greek: 'el-GR', Hungarian: 'hu-HU', Italian: 'it-IT', Norwegian: 'nb-NO',
+  Polish: 'pl-PL', Portuguese: 'pt-PT', Romanian: 'ro-RO', Russian: 'ru-RU',
+  Spanish: 'es-ES', Swedish: 'sv-SE', Ukrainian: 'uk-UA',
+};
+
 const MODE_LABEL: Record<ConjMode, string> = {
   'pronoun-verb': 'Pronoun + Verb',
   'id-adj-noun':  'Identifier + Adjective + Noun',
@@ -28,11 +36,20 @@ function saveProg(from: string, to: string, mode: ConjMode, p: Progress) {
   localStorage.setItem(pKey(from, to, mode), JSON.stringify(p));
 }
 
-function tts(text: string) {
+function tts(text: string, lang = 'en-US') {
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US';
+  u.lang = lang;
   window.speechSynthesis.speak(u);
+}
+
+function ttsSequence(items: Array<{ text: string; lang: string }>) {
+  window.speechSynthesis.cancel();
+  for (const { text, lang } of items) {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    window.speechSynthesis.speak(u);
+  }
 }
 
 export default function TranslationQuiz({ mode }: Props) {
@@ -43,6 +60,7 @@ export default function TranslationQuiz({ mode }: Props) {
   const [result,   setResult]   = useState<'idle' | 'correct' | 'wrong'>('idle');
   const [loading,  setLoading]  = useState(false);
   const [progress, setProgress] = useState<Progress>({ correct: 0, total: 0 });
+  const [lastPrompt, setLastPrompt] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset when language pair or mode changes
@@ -51,6 +69,7 @@ export default function TranslationQuiz({ mode }: Props) {
     setQuiz(null);
     setAnswer('');
     setResult('idle');
+    setLastPrompt('');
   }, [fromLang, toLang, mode]);
 
   const generate = async () => {
@@ -59,14 +78,32 @@ export default function TranslationQuiz({ mode }: Props) {
     setResult('idle');
     setQuiz(null);
     try {
-      const q = await fetchQuiz(toLang, mode, fromLang);
+      const q = await fetchQuiz(toLang, mode, fromLang, lastPrompt);
       setQuiz(q);
+      setLastPrompt(q.prompt);
       setTimeout(() => inputRef.current?.focus(), 60);
     } catch {
       setQuiz({ prompt: 'Error generating. Try again.', answer: '', note: '' });
     }
     setLoading(false);
   };
+
+  // Keep a stable ref to generate so the keydown handler below doesn't stale-close over it
+  const generateRef = useRef(generate);
+  generateRef.current = generate;
+
+  // Enter key when result !== 'idle' → next question
+  useEffect(() => {
+    if (result === 'idle') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !loading) {
+        e.stopPropagation();
+        generateRef.current();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [result, loading]);
 
   const check = () => {
     if (!quiz?.answer || !answer.trim()) return;
@@ -75,7 +112,14 @@ export default function TranslationQuiz({ mode }: Props) {
     setProgress(np);
     saveProg(fromLang, toLang, mode, np);
     setResult(ok ? 'correct' : 'wrong');
-    tts(ok ? 'Correct!' : `Incorrect. The answer is: ${quiz.answer}.`);
+    if (ok) {
+      tts('Correct!', 'en-US');
+    } else {
+      ttsSequence([
+        { text: 'Incorrect. The answer is:', lang: 'en-US' },
+        { text: quiz.answer, lang: LANG_LOCALE[toLang] ?? 'en-US' },
+      ]);
+    }
   };
 
   const acceptAnyway = () => {
@@ -83,7 +127,7 @@ export default function TranslationQuiz({ mode }: Props) {
     setProgress(np);
     saveProg(fromLang, toLang, mode, np);
     setResult('correct');
-    tts('Accepted!');
+    tts('Accepted!', 'en-US');
   };
 
   const swapLangs = () => { const t = fromLang; setFromLang(toLang); setToLang(t); };
