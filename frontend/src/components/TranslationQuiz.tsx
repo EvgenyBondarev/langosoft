@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { fetchQuiz } from '../services/api';
-import type { QuizItem } from '../types';
+import type { QuizItem, ConjMode } from '../types';
+
+interface Props { mode: ConjMode }
 
 const LANGUAGES = [
   'Bulgarian', 'Czech', 'Danish', 'Dutch', 'English', 'Finnish',
@@ -8,17 +10,22 @@ const LANGUAGES = [
   'Polish', 'Portuguese', 'Romanian', 'Russian', 'Spanish', 'Swedish', 'Ukrainian',
 ];
 
+const MODE_LABEL: Record<ConjMode, string> = {
+  'pronoun-verb': 'Pronoun + Verb',
+  'id-adj-noun':  'Identifier + Adjective + Noun',
+};
+
 interface Progress { correct: number; total: number }
 
-function pKey(from: string, to: string) { return `tquiz_${from}_${to}`; }
+function pKey(from: string, to: string, mode: ConjMode) { return `tquiz_${mode}_${from}_${to}`; }
 
-function loadProg(from: string, to: string): Progress {
-  try { const r = localStorage.getItem(pKey(from, to)); return r ? JSON.parse(r) : { correct: 0, total: 0 }; }
+function loadProg(from: string, to: string, mode: ConjMode): Progress {
+  try { const r = localStorage.getItem(pKey(from, to, mode)); return r ? JSON.parse(r) : { correct: 0, total: 0 }; }
   catch { return { correct: 0, total: 0 }; }
 }
 
-function saveProg(from: string, to: string, p: Progress) {
-  localStorage.setItem(pKey(from, to), JSON.stringify(p));
+function saveProg(from: string, to: string, mode: ConjMode, p: Progress) {
+  localStorage.setItem(pKey(from, to, mode), JSON.stringify(p));
 }
 
 function tts(text: string) {
@@ -28,7 +35,7 @@ function tts(text: string) {
   window.speechSynthesis.speak(u);
 }
 
-export default function TranslationQuiz() {
+export default function TranslationQuiz({ mode }: Props) {
   const [fromLang, setFromLang] = useState('English');
   const [toLang,   setToLang]   = useState('Italian');
   const [quiz,     setQuiz]     = useState<QuizItem | null>(null);
@@ -38,12 +45,13 @@ export default function TranslationQuiz() {
   const [progress, setProgress] = useState<Progress>({ correct: 0, total: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Reset when language pair or mode changes
   useEffect(() => {
-    setProgress(loadProg(fromLang, toLang));
+    setProgress(loadProg(fromLang, toLang, mode));
     setQuiz(null);
     setAnswer('');
     setResult('idle');
-  }, [fromLang, toLang]);
+  }, [fromLang, toLang, mode]);
 
   const generate = async () => {
     setLoading(true);
@@ -51,7 +59,7 @@ export default function TranslationQuiz() {
     setResult('idle');
     setQuiz(null);
     try {
-      const q = await fetchQuiz(toLang, 'translate', fromLang);
+      const q = await fetchQuiz(toLang, mode, fromLang);
       setQuiz(q);
       setTimeout(() => inputRef.current?.focus(), 60);
     } catch {
@@ -60,19 +68,12 @@ export default function TranslationQuiz() {
     setLoading(false);
   };
 
-  const commit = (wasCorrect: boolean) => {
-    const np: Progress = {
-      correct: progress.correct + (wasCorrect ? 1 : 0),
-      total:   progress.total + 1,
-    };
-    setProgress(np);
-    saveProg(fromLang, toLang, np);
-  };
-
   const check = () => {
     if (!quiz?.answer || !answer.trim()) return;
     const ok = answer.trim().toLowerCase() === quiz.answer.trim().toLowerCase();
-    commit(ok);
+    const np: Progress = { correct: progress.correct + (ok ? 1 : 0), total: progress.total + 1 };
+    setProgress(np);
+    saveProg(fromLang, toLang, mode, np);
     setResult(ok ? 'correct' : 'wrong');
     tts(ok ? 'Correct!' : `Incorrect. The answer is: ${quiz.answer}.`);
   };
@@ -80,24 +81,23 @@ export default function TranslationQuiz() {
   const acceptAnyway = () => {
     const np: Progress = { correct: progress.correct + 1, total: progress.total };
     setProgress(np);
-    saveProg(fromLang, toLang, np);
+    saveProg(fromLang, toLang, mode, np);
     setResult('correct');
     tts('Accepted!');
   };
 
-  const swapLangs = () => {
-    const tmp = fromLang;
-    setFromLang(toLang);
-    setToLang(tmp);
-  };
+  const swapLangs = () => { const t = fromLang; setFromLang(toLang); setToLang(t); };
 
   const pct   = progress.total > 0 ? Math.round((progress.correct / progress.total) * 100) : 0;
-  const ready = quiz && quiz.answer;
+  const ready = !!(quiz?.answer);
 
   return (
     <div className="tquiz">
 
-      {/* ── Language pair ─────────────────────────────────────────────────── */}
+      {/* Mode label */}
+      <div className="tquiz-mode-label">{MODE_LABEL[mode]}</div>
+
+      {/* Language pair */}
       <div className="tquiz-langs">
         <select
           className="conj-select tquiz-lang-select"
@@ -107,7 +107,7 @@ export default function TranslationQuiz() {
           {LANGUAGES.map(l => <option key={l}>{l}</option>)}
         </select>
 
-        <button className="tquiz-swap" onClick={swapLangs} title="Swap languages">⇄</button>
+        <button className="tquiz-swap" onClick={swapLangs} title="Swap">⇄</button>
 
         <select
           className="conj-select tquiz-lang-select"
@@ -118,60 +118,46 @@ export default function TranslationQuiz() {
         </select>
       </div>
 
-      {/* ── Progress ──────────────────────────────────────────────────────── */}
+      {/* Progress */}
       <div className="tquiz-progress">
         <span className="tquiz-progress-label">
-          {progress.total > 0
-            ? `${progress.correct} / ${progress.total} correct — ${pct}%`
-            : 'No attempts yet'}
+          {progress.total > 0 ? `${progress.correct} / ${progress.total} correct — ${pct}%` : 'No attempts yet'}
         </span>
         <div className="tquiz-progress-track">
-          <div
-            className="tquiz-progress-fill"
-            style={{ width: progress.total > 0 ? `${pct}%` : '0%' }}
-          />
+          <div className="tquiz-progress-fill" style={{ width: progress.total > 0 ? `${pct}%` : '0%' }} />
         </div>
       </div>
 
-      {/* ── Jumbotron ─────────────────────────────────────────────────────── */}
-      {ready ? (
-        <div className={`tquiz-jumbotron ${
-          result === 'correct' ? 'tquiz-jumbotron--correct' :
-          result === 'wrong'   ? 'tquiz-jumbotron--wrong'   : ''
-        }`}>
-          <div className="tquiz-from-label">{fromLang}</div>
-          <div className="tquiz-prompt">{quiz!.prompt}</div>
-          <div className="tquiz-to-label">→ {toLang}</div>
-        </div>
-      ) : (
-        <div className="tquiz-jumbotron tquiz-jumbotron--empty">
+      {/* Jumbotron */}
+      <div className={`tquiz-jumbotron ${result === 'correct' ? 'tquiz-jumbotron--correct' : result === 'wrong' ? 'tquiz-jumbotron--wrong' : ''} ${!ready ? 'tquiz-jumbotron--empty' : ''}`}>
+        {ready ? (
+          <>
+            <div className="tquiz-from-label">{fromLang}</div>
+            <div className="tquiz-prompt">{quiz!.prompt}</div>
+            <div className="tquiz-to-label">→ {toLang}</div>
+          </>
+        ) : (
           <div className="tquiz-empty-msg">
-            {loading ? 'Generating…' : `Press Start to translate ${fromLang} → ${toLang}`}
+            {loading ? 'Generating…' : `Press Start · ${fromLang} → ${toLang}`}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* ── Answer input ──────────────────────────────────────────────────── */}
+      {/* Answer input */}
       {ready && (
         <input
           ref={inputRef}
-          className={`conj-input tquiz-answer ${
-            result === 'correct' ? 'quiz-input--correct' :
-            result === 'wrong'   ? 'quiz-input--wrong'   : ''
-          }`}
+          className={`conj-input tquiz-answer ${result === 'correct' ? 'quiz-input--correct' : result === 'wrong' ? 'quiz-input--wrong' : ''}`}
           value={answer}
-          onChange={e => { setAnswer(e.target.value); if (result !== 'idle') { setResult('idle'); } }}
-          onKeyDown={e => {
-            if (e.key === 'Enter') result === 'idle' ? check() : generate();
-            e.stopPropagation();
-          }}
+          onChange={e => { setAnswer(e.target.value); if (result !== 'idle') setResult('idle'); }}
+          onKeyDown={e => { if (e.key === 'Enter') result === 'idle' ? check() : generate(); e.stopPropagation(); }}
           placeholder={`Type in ${toLang}…`}
           disabled={result !== 'idle'}
           autoComplete="off"
         />
       )}
 
-      {/* ── Feedback + actions ────────────────────────────────────────────── */}
+      {/* Actions */}
       {result === 'idle' && ready && (
         <div className="tquiz-actions">
           <button className="conj-btn" onClick={check} disabled={!answer.trim()}>Check</button>
@@ -198,14 +184,10 @@ export default function TranslationQuiz() {
         </div>
       )}
 
-      {/* ── Start / no quiz yet ───────────────────────────────────────────── */}
-      {!ready && !loading && (
-        <button className="conj-btn tquiz-start-btn" onClick={generate}>
-          {quiz ? 'Try Again' : 'Start'}
+      {!ready && (
+        <button className="conj-btn tquiz-start-btn" onClick={generate} disabled={loading}>
+          {loading ? 'Generating…' : 'Start'}
         </button>
-      )}
-      {!ready && loading && (
-        <button className="conj-btn tquiz-start-btn" disabled>Generating…</button>
       )}
 
     </div>

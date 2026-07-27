@@ -80,16 +80,32 @@ public class GroqService
     {
         string prompt;
 
-        if (mode == "translate")
+        if (mode == "pronoun-verb")
         {
             prompt =
-                $"Generate one translation exercise for a {language} learner.\n" +
-                $"Give a natural {fromLanguage} sentence (2–8 words, everyday vocabulary, unambiguous meaning).\n\n" +
+                $"Generate a {fromLanguage}→{language} translation drill.\n" +
+                $"Give ONLY a short pronoun + conjugated verb phrase in {fromLanguage}. " +
+                $"Max 3 words. No objects, no adverbs, no extra words.\n" +
+                $"Good examples: 'he knows', 'I am going', 'she sleeps', 'they have eaten', 'we must leave'.\n" +
+                $"Bad examples (too long): 'I'm going to the movies tonight', 'he knows the answer'.\n\n" +
                 $"Return a JSON object with exactly these keys:\n" +
-                $"- \"prompt\": the {fromLanguage} sentence\n" +
-                $"- \"answer\": the most natural {language} translation\n" +
+                $"- \"prompt\": the {fromLanguage} pronoun+verb phrase (max 3 words)\n" +
+                $"- \"answer\": the {language} translation\n" +
                 $"- \"note\": one grammar tip (max 10 words)\n\n" +
-                $"Example: {{\"prompt\":\"he knows the answer\",\"answer\":\"conosce la risposta\",\"note\":\"conoscere = knowing a thing, sapere = knowing a fact\"}}\n" +
+                $"Return ONLY the JSON object, nothing else.";
+        }
+        else if (mode == "id-adj-noun")
+        {
+            prompt =
+                $"Generate a {fromLanguage}→{language} translation drill.\n" +
+                $"Give ONLY a short noun phrase in {fromLanguage}: article/determiner + optional adjective + noun. " +
+                $"Max 4 words. No verbs, no clauses.\n" +
+                $"Good examples: 'the big house', 'a beautiful girl', 'this old book', 'my red car'.\n" +
+                $"Bad examples (have verbs): 'the house is big', 'a girl who is beautiful'.\n\n" +
+                $"Return a JSON object with exactly these keys:\n" +
+                $"- \"prompt\": the {fromLanguage} noun phrase (max 4 words)\n" +
+                $"- \"answer\": the {language} translation\n" +
+                $"- \"note\": one grammar tip about agreement or article (max 10 words)\n\n" +
                 $"Return ONLY the JSON object, nothing else.";
         }
         else

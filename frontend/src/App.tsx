@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { AppMode, CantoData, Feature, BookInfo, Structure } from './types';
+import type { AppMode, CantoData, Feature, ConjMode, BookInfo, Structure } from './types';
 import type { TextPanelHandle } from './components/TextPanel';
 import {
   fetchCanto, fetchStructure, fetchBooks,
@@ -11,8 +11,6 @@ import TextPanel from './components/TextPanel';
 import AIModal from './components/AIModal';
 import StatusBar from './components/StatusBar';
 import Sidebar from './components/Sidebar';
-import VerbForms from './components/VerbForms';
-import NounPhrase from './components/NounPhrase';
 import TranslationQuiz from './components/TranslationQuiz';
 import AccentBuilder from './components/AccentBuilder';
 import './App.css';
@@ -51,6 +49,7 @@ export default function App() {
   const [backendReady, setBackendReady] = useState(false);
   const [structure, setStructure]   = useState<Structure>(EMPTY_STRUCTURE);
   const [feature, setFeature]       = useState<Feature>('reader');
+  const [conjMode, setConjMode]     = useState<ConjMode>('pronoun-verb');
   const [books, setBooks]           = useState<BookInfo[]>([DANTE_FALLBACK]);
   const [selectedBook, setSelectedBook] = useState('dante');
   const [syncScroll, setSyncScroll] = useState(false);
@@ -331,41 +330,43 @@ export default function App() {
       <header className="app-header">
         <h1 className="app-title">langosoft</h1>
 
-        <nav className="top-nav">
-          <select className="nav-select" value={selectedBook} onChange={e => setSelectedBook(e.target.value)}>
-            {books.map(b => (
-              <option key={b.id} value={b.id}>{b.language} — {b.title}</option>
-            ))}
-          </select>
+        {feature === 'reader' && (
+          <nav className="top-nav">
+            <select className="nav-select" value={selectedBook} onChange={e => setSelectedBook(e.target.value)}>
+              {books.map(b => (
+                <option key={b.id} value={b.id}>{b.language} — {b.title}</option>
+              ))}
+            </select>
 
-          {hasText && (
-            <>
-              <select
-                className="nav-select"
-                value={n.canticle}
-                onChange={e => {
-                  const c = Number(e.target.value);
-                  nav.setNav(s => ({ ...s, canticle: c, canto: 0, line: 0, word: 0, letter: 0, selectionMode: false, selectionStart: null, selectionEnd: null }));
-                }}
-              >
-                {structure.canticleNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
-              </select>
+            {hasText && (
+              <>
+                <select
+                  className="nav-select"
+                  value={n.canticle}
+                  onChange={e => {
+                    const c = Number(e.target.value);
+                    nav.setNav(s => ({ ...s, canticle: c, canto: 0, line: 0, word: 0, letter: 0, selectionMode: false, selectionStart: null, selectionEnd: null }));
+                  }}
+                >
+                  {structure.canticleNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
+                </select>
 
-              <select
-                className="nav-select"
-                value={n.canto}
-                onChange={e => {
-                  const c = Number(e.target.value);
-                  nav.setNav(s => ({ ...s, canto: c, line: 0, word: 0, letter: 0, selectionMode: false, selectionStart: null, selectionEnd: null }));
-                }}
-              >
-                {Array.from({ length: structure.cantosPerCanticle[n.canticle] ?? 0 }, (_, i) => (
-                  <option key={i} value={i}>{toRoman(i + 1)}</option>
-                ))}
-              </select>
-            </>
-          )}
-        </nav>
+                <select
+                  className="nav-select"
+                  value={n.canto}
+                  onChange={e => {
+                    const c = Number(e.target.value);
+                    nav.setNav(s => ({ ...s, canto: c, line: 0, word: 0, letter: 0, selectionMode: false, selectionStart: null, selectionEnd: null }));
+                  }}
+                >
+                  {Array.from({ length: structure.cantosPerCanticle[n.canticle] ?? 0 }, (_, i) => (
+                    <option key={i} value={i}>{toRoman(i + 1)}</option>
+                  ))}
+                </select>
+              </>
+            )}
+          </nav>
+        )}
 
         {feature === 'reader' && (
           <label className="sync-label">
@@ -379,7 +380,12 @@ export default function App() {
       </header>
 
       <div className="app-body">
-        <Sidebar activeFeature={feature} onFeatureChange={setFeature} />
+        <Sidebar
+            activeFeature={feature}
+            conjMode={conjMode}
+            onFeatureChange={setFeature}
+            onConjModeChange={setConjMode}
+          />
 
         <div className="main-content">
           {feature === 'reader' && hasText && (
@@ -435,21 +441,9 @@ export default function App() {
             </div>
           )}
 
-          {feature === 'quiz' && (
+          {feature === 'conjugator' && (
             <div className="feature-panel">
-              <TranslationQuiz />
-            </div>
-          )}
-
-          {feature === 'verb' && (
-            <div className="feature-panel">
-              <VerbForms />
-            </div>
-          )}
-
-          {feature === 'noun' && (
-            <div className="feature-panel">
-              <NounPhrase />
+              <TranslationQuiz mode={conjMode} />
             </div>
           )}
 

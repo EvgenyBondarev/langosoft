@@ -112,6 +112,35 @@
 
 .sidebar-icon { font-size: 16px; }
 
+.sidebar-subitems {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-sub-btn {
+  display: flex;
+  align-items: center;
+  padding: 7px 16px 7px 38px;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  color: #6a737d;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.1s, color 0.1s;
+}
+
+.sidebar-sub-btn:hover { background: #21262d; color: #c9d1d9; }
+
+.sidebar-sub-btn--active {
+  color: #58a6ff;
+  border-left-color: #58a6ff;
+  background: #1f3d5c40;
+}
+
 /* ── Main content ─────────────────────────────────────────────────────────── */
 
 .main-content {
