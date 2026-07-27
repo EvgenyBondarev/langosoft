@@ -149,7 +149,9 @@ export default function App() {
         setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [selectedBook, nav.nav.canticle, nav.nav.canto]);
+  // structure.canticleCount: re-fetch when book finishes loading (0 → N)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBook, nav.nav.canticle, nav.nav.canto, structure.canticleCount]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const selectedBookInfo = books.find(b => b.id === selectedBook) ?? DANTE_FALLBACK;
