@@ -38,11 +38,11 @@ export async function fetchBooks(): Promise<BookInfo[]> {
   return r.json();
 }
 
-export async function fetchQuiz(language: string, mode: string): Promise<QuizItem> {
+export async function fetchQuiz(language: string, mode: string, fromLanguage = 'English'): Promise<QuizItem> {
   const r = await fetch(`${BASE}/ai/quiz`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ language, mode }),
+    body: JSON.stringify({ language, mode, fromLanguage }),
   });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();

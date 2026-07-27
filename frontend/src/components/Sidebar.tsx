@@ -6,9 +6,11 @@ interface Props {
 }
 
 const ITEMS: { id: Feature; icon: string; label: string }[] = [
-  { id: 'reader',     icon: '📖', label: 'Parallel Texts' },
-  { id: 'conjugator', icon: '🔤', label: 'Conjugator' },
-  { id: 'accent',     icon: '🎵', label: 'Accent Builder' },
+  { id: 'reader', icon: '📖', label: 'Parallel Texts' },
+  { id: 'quiz',   icon: '🎯', label: 'Translation Quiz' },
+  { id: 'verb',   icon: '🔤', label: 'Verb Forms' },
+  { id: 'noun',   icon: '🏗️',  label: 'Noun Phrase' },
+  { id: 'accent', icon: '🎵', label: 'Accent Builder' },
 ];
 
 export default function Sidebar({ activeFeature, onFeatureChange }: Props) {

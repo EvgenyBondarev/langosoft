@@ -76,24 +76,41 @@ public class GroqService
         return ChatAsync(prompt, 400);
     }
 
-    public async Task<QuizItem> QuizAsync(string language, string mode)
+    public async Task<QuizItem> QuizAsync(string language, string mode, string fromLanguage = "English")
     {
-        var modeDesc = mode switch
-        {
-            "verb" => $"a verb conjugation exercise (pick a common {language} verb, specify person + tense, ask for the conjugated form)",
-            "noun" => $"a noun phrase exercise (pick a common {language} noun, specify gender/number/article, ask for the full noun phrase with article)",
-            _      => $"either a verb conjugation or a noun phrase exercise — your choice"
-        };
+        string prompt;
 
-        var prompt =
-            $"Generate one language drill exercise for a student learning {language}.\n" +
-            $"Type: {modeDesc}\n\n" +
-            $"Return a JSON object with exactly these keys:\n" +
-            $"- \"prompt\": what to show the student (be specific: include the base form and what is asked)\n" +
-            $"- \"answer\": the single correct answer string\n" +
-            $"- \"note\": one grammar note (max 10 words) explaining the answer\n\n" +
-            $"Example: {{\"prompt\":\"1sg present indicative of 'essere' (Italian)\",\"answer\":\"sono\",\"note\":\"Irregular verb; memorise all 6 present forms\"}}\n" +
-            $"Return ONLY the JSON object, nothing else.";
+        if (mode == "translate")
+        {
+            prompt =
+                $"Generate one translation exercise for a {language} learner.\n" +
+                $"Give a natural {fromLanguage} sentence (2–8 words, everyday vocabulary, unambiguous meaning).\n\n" +
+                $"Return a JSON object with exactly these keys:\n" +
+                $"- \"prompt\": the {fromLanguage} sentence\n" +
+                $"- \"answer\": the most natural {language} translation\n" +
+                $"- \"note\": one grammar tip (max 10 words)\n\n" +
+                $"Example: {{\"prompt\":\"he knows the answer\",\"answer\":\"conosce la risposta\",\"note\":\"conoscere = knowing a thing, sapere = knowing a fact\"}}\n" +
+                $"Return ONLY the JSON object, nothing else.";
+        }
+        else
+        {
+            var modeDesc = mode switch
+            {
+                "verb" => $"a verb conjugation exercise (pick a common {language} verb, specify person + tense, ask for the conjugated form)",
+                "noun" => $"a noun phrase exercise (pick a common {language} noun, specify gender/number/article, ask for the full noun phrase with article)",
+                _      => $"either a verb conjugation or a noun phrase exercise — your choice"
+            };
+
+            prompt =
+                $"Generate one language drill exercise for a student learning {language}.\n" +
+                $"Type: {modeDesc}\n\n" +
+                $"Return a JSON object with exactly these keys:\n" +
+                $"- \"prompt\": what to show the student (be specific: include the base form and what is asked)\n" +
+                $"- \"answer\": the single correct answer string\n" +
+                $"- \"note\": one grammar note (max 10 words) explaining the answer\n\n" +
+                $"Example: {{\"prompt\":\"1sg present indicative of 'essere' (Italian)\",\"answer\":\"sono\",\"note\":\"Irregular verb; memorise all 6 present forms\"}}\n" +
+                $"Return ONLY the JSON object, nothing else.";
+        }
 
         var raw = await ChatAsync(prompt, 250, jsonMode: true);
 

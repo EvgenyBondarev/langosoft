@@ -1,6 +1,6 @@
 export type Panel = 'it' | 'en';
 export type AppMode = 'normal' | 'question' | 'response';
-export type Feature = 'reader' | 'conjugator' | 'accent';
+export type Feature = 'reader' | 'verb' | 'noun' | 'quiz' | 'accent';
 
 export interface CantoData {
   canticleName: string;

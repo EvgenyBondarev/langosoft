@@ -1,0 +1,24 @@
+{
+  "name": "langosoft",
+  "version": "1.0.0",
+  "description": "Study Dante's Divine Comedy in Italian + English using only your keyboard.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EvgenyBondarev/langosoft.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/EvgenyBondarev/langosoft/issues"
+  },
+  "homepage": "https://github.com/EvgenyBondarev/langosoft#readme",
+  "dependencies": {
+    "libsodium-wrappers": "^0.8.4"
+  }
+}

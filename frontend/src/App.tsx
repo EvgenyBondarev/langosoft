@@ -11,7 +11,9 @@ import TextPanel from './components/TextPanel';
 import AIModal from './components/AIModal';
 import StatusBar from './components/StatusBar';
 import Sidebar from './components/Sidebar';
-import Conjugator from './components/Conjugator';
+import VerbForms from './components/VerbForms';
+import NounPhrase from './components/NounPhrase';
+import TranslationQuiz from './components/TranslationQuiz';
 import AccentBuilder from './components/AccentBuilder';
 import './App.css';
 
@@ -433,9 +435,21 @@ export default function App() {
             </div>
           )}
 
-          {feature === 'conjugator' && (
+          {feature === 'quiz' && (
             <div className="feature-panel">
-              <Conjugator />
+              <TranslationQuiz />
+            </div>
+          )}
+
+          {feature === 'verb' && (
+            <div className="feature-panel">
+              <VerbForms />
+            </div>
+          )}
+
+          {feature === 'noun' && (
+            <div className="feature-panel">
+              <NounPhrase />
             </div>
           )}
 
